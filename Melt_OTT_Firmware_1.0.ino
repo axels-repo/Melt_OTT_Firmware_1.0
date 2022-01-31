@@ -104,7 +104,7 @@ void setup () {
   }
   int uploadTime = Min + Hour * 60 + Day * 24 * 60 + (monthIndex + 1) * 24 * 60 * 31;
   int RTCTime = now.minute() + now.hour() * 60 + now.day() * 24 * 60 + now.month() * 24 * 60 * 31;
-  if (now.year() < 2020 || RTCTime < uploadTime) {
+  if (now.year() <= Year || RTCTime < uploadTime) {
     if (Sec >= 60 - RTC_OFFSET_S) {
       Min = Min + 1;
       Sec = Sec + RTC_OFFSET_S - 60;
