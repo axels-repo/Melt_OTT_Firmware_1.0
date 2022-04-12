@@ -21,7 +21,6 @@ void setup () {
   if (battVoltUpdate() < 3.5) { // If battery less that 3.5v, sleep and reset via wdt
     rf95.init();
     rf95.sleep();
-    debugWrite("Startup failed. Battery voltage = " + String(battVoltUpdate()) + " system will restart \n");
     SysTick->CTRL &= ~SysTick_CTRL_TICKINT_Msk;
     SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
     __DSB();
@@ -33,6 +32,7 @@ void setup () {
   hexstr(getChipId(), addr, sizeof(addr));  //Establish default node ID. Overwrite if specified in config
   NodeID = String(addr);
   pinMode(FET_POWER, OUTPUT);
+  pinMode(RELAYsampler_PIN, OUTPUT); //PIN linked to the relay to send a pulse to the sampler
 
   if (rf95.init() == false) {
     while (1) {
@@ -170,7 +170,6 @@ void loop () {
   resetWDT();
 
     if (battVoltUpdate() < 3.5) { // If battery less that 3.5v, sleep and reset via wdt
-    debugWrite("Loop restart at: " + normTimestamp + ". Battery voltage = " + String(battVoltUpdate()) + " system will restart \n");
     systemReset();
   };
   
@@ -953,18 +952,10 @@ void ChangeParameter (String nameparameter , String value) { //all values should
 }
 
 void StartSampling() { //start the sampling procedure
-  //  To Be Implemented
-  //  digitalWrite(RELAYsampler_PIN, HIGH); //start sampling with a pulse to the sampler
-  //  delay(pulse_duration); //pulse in milliseconds
-  //  digitalWrite(RELAYsampler_PIN, LOW); //stop sampling
-  //  delay(1000); //wait a little, why not?
-  //  samnum += 1;
-  //  loggerln("Start sampling #" + String(samnum));
-  //  lastaction = "StartSampling-2";
-  //  //  String GSorder=String("\"TYP\":\"Order\",\"FRO\":\""+myphone+"\",\"MSG\":\""+sampletype+String(samnum)+"\"}");
-  //  String GSorder = String(myphone + "," + sampletype + String(samnum));
-  //  PubToGS(GSorder);
-  //  lastaction = "StartSampling-3";
+    digitalWrite(RELAYsampler_PIN, HIGH); //start sampling with a pulse to the sampler
+    delay(pulse_duration); //pulse in milliseconds
+    digitalWrite(RELAYsampler_PIN, LOW); //stop sampling
+    samnum += 1;
 }
 
 void TestSampling() { //test if sampling if required
@@ -1004,4 +995,6 @@ void TestSampling() { //test if sampling if required
     samon = 0;
     vevent = 0; //ready to monitor the cumulated volume of the next event
   }
+
+  
 }

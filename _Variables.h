@@ -1,4 +1,6 @@
 
+#define RELAYsampler_PIN  A2       //PIN linked to the relay to power of the sampler  (relay1 = pin1 & relay2 = pin2)
+#define pulse_duration    300        //duration of the pulse to trigger one sample in MILLISECONDS!!
 
 #define default_coeffb    1.2       //default value
 #define default_coeffc    0.6       //default value
