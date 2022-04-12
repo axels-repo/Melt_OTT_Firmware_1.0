@@ -1,8 +1,7 @@
 /*
-  Main branch
-  Kai James kaicjames@outlook.com
+  Forked by Axel Baylon axelbaylon@hotmail.com based off
+  Kai James kaicjames@outlook.com code for Melt Sensors
 */
-
 #include "_Libs.h"
 
 
@@ -11,6 +10,25 @@
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void setup () {
+    setupWDT( WATCHDOG_TIMER_MS );
+  analogReference(AR_INTERNAL2V23); //For internal battery level calculation
+
+    if (!SD.begin(SD_SPI_CS)) {
+    //SerialUSB.println("SD initialization failed!");
+    crashNflash(1);  //10*10ms high period
+  }
+
+  if (battVoltUpdate() < 3.5) { // If battery less that 3.5v, sleep and reset via wdt
+    rf95.init();
+    rf95.sleep();
+    debugWrite("Startup failed. Battery voltage = " + String(battVoltUpdate()) + " system will restart \n");
+    SysTick->CTRL &= ~SysTick_CTRL_TICKINT_Msk;
+    SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
+    __DSB();
+    __WFI();
+    SysTick->CTRL |= SysTick_CTRL_TICKINT_Msk;
+  };
+  
   sensor.RTCTemp.sensorCount = 1;
   hexstr(getChipId(), addr, sizeof(addr));  //Establish default node ID. Overwrite if specified in config
   NodeID = String(addr);
@@ -30,11 +48,6 @@ void setup () {
   }
   sendLoRaIgnore(String(NodeID) + ": sLoRa started");
 
-  //SD card
-  if (!SD.begin(SD_SPI_CS)) {
-    //SerialUSB.println("SD initialization failed!");
-    crashNflash(1);  //10*10ms high period
-  }
   OneWireTempSetup(); //Must auto detect sensors BEFORE configRead()
 
 
@@ -104,7 +117,7 @@ void setup () {
   }
   int uploadTime = Min + Hour * 60 + Day * 24 * 60 + (monthIndex + 1) * 24 * 60 * 31;
   int RTCTime = now.minute() + now.hour() * 60 + now.day() * 24 * 60 + now.month() * 24 * 60 * 31;
-  if (now.year() <= Year || RTCTime < uploadTime) {
+  if (RTCTime < uploadTime || now.year() < Year) {
     if (Sec >= 60 - RTC_OFFSET_S) {
       Min = Min + 1;
       Sec = Sec + RTC_OFFSET_S - 60;
@@ -121,7 +134,6 @@ void setup () {
   internalrtc.begin(false);
   internalrtc.attachInterrupt(wake_from_sleep);
 
-  analogReference(AR_INTERNAL2V23); //For internal battery level calculation
 
 
   sendLoRaIgnore("Going to sleep to sync time");
@@ -156,6 +168,12 @@ void loop () {
   }
 
   resetWDT();
+
+    if (battVoltUpdate() < 3.5) { // If battery less that 3.5v, sleep and reset via wdt
+    debugWrite("Loop restart at: " + normTimestamp + ". Battery voltage = " + String(battVoltUpdate()) + " system will restart \n");
+    systemReset();
+  };
+  
   wake_system();
 
 
@@ -532,7 +550,7 @@ void logDataToSD() {
   ChangeParameter ("counter" , String(counter));
   if (!SD.exists(logFile)) {
      //csvObject = "Site_name,DateTime [DDMMYY HH:MM:SS],Timestamp[s],Signal_strength[/31],Measure_number[-],Battery_level[V],UP_Head_level[m],UP_Water_level[m],Water_temp[C],Flow [m3/s],Vol_cumul_event[m3],Vol_cumul_total[m3],Weir_under_water [1=yes/0=no],DWN_water_level[m],DOWN_Head_level[m],Flow-eq_used[weir or submerged eq.]\n";
-    csvObject = "Site_name,DateTime [DDMMYY HH:MM:SS],Timestamp[s],Signal_strength[/31],Measure_number[-],Battery_level[V],UP_Head_level[m],UP_Water_level[m],Water_temp[C],Flow [m3/s],Vol_cumul_event[m3],Vol_cumul_total[m3],Weir_under_water [1=yes/0=no],DWN_water_level[m],DOWN_Head_level[m],Flow-eq_used[weir or submerged eq.],Raw_OTT_Measurement\n";
+      csvObject = "Site_name,DateTime [DDMMYY HH:MM:SS],Timestamp[s],Signal_strength[/31],Measure_number[-],Battery_level[V],UP_Head_level[m],UP_Water_level[m],Water_temp[C],Flow [m3/s],Vol_cumul_event[m3],Vol_cumul_total[m3],Weir_under_water [1=yes/0=no],DWN_water_level[m],DOWN_Head_level[m],Flow-eq_used[weir or submerged eq.],RAW_OTT_UP, RAW_OTT_DOWN\n";
   }
   myFile = SD.open(logFile, FILE_WRITE);
   csvObject = csvObject + siteID + NodeID + "," + normTimestamp + UNIXtimestamp + "," + String(sensor.USS.measure[0], 2) + "," + String(counter) + "," + String(batlevel) + "," + String(hlev, 3) + "," + String(wlev, 3) + "," + String(otttemp) + "," + String(flow, 4) + "," + String(vevent, 4) + "," + String(vcumul, 4) + "," + underwater + "," + String(wlevdown, 3) + "," + String(hlevdown, 3) + "," + flowused + "," + String(ottlev, 3);

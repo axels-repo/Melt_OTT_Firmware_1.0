@@ -4,7 +4,7 @@
 #define default_coeffc    0.6       //default value
 #define TEST_LOOP             (false)     //Run test loop instead of actual loop
 #define SLEEP_ENABLED         (true)    //Disable to keep serial coms alive for testing
-#define FIRMWARE_VERSION      (200)
+#define FIRMWARE_VERSION      (201)
 #define BV_OFFSET             (0.01)
 #define ALS_POWER_WAIT        (1000) //Depends on probe. 1000 is safe
 #define RTC_OFFSET_S          (12)
